@@ -1,0 +1,12 @@
+venv/
+__pycache__/
+*.pyc
+.env
+*.env
+.modal.toml
+cookies.txt
+tmp_downloads/
+test.mp4*
+*.webm
+*.mp4
+.DS_Store
