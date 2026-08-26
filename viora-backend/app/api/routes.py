@@ -53,36 +53,37 @@ async def analyze_youtube(body: AnalyzeRequest):
 
 @router.get("/test-download")
 async def test_download():
-    import yt_dlp
+    import httpx
     import tempfile
     import os
-    import traceback
 
-    url = "https://www.youtube.com/shorts/5MgBikgcWnY"
-    out_dir = tempfile.mkdtemp()
+    video_id = "5MgBikgcWnY"
 
     try:
-        ydl_opts = {
-            "format": "best[ext=mp4]/best",
-            "outtmpl": f"{out_dir}/%(id)s.%(ext)s",
-            "quiet": True,
-            "noplaylist": True,
-        }
+        # Step 1 -- get stream URL from Piped
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.get(f"https://pipedapi.kavin.rocks/streams/{video_id}")
+            data = r.json()
 
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
+        if "videoStreams" not in data:
+            return {"status": "error", "error": str(data)}
 
-        files = os.listdir(out_dir)
-        size = os.path.getsize(f"{out_dir}/{files[0]}") if files else 0
+        # Step 2 -- pick best video stream
+        streams = data["videoStreams"]
+        best = sorted(streams, key=lambda x: x.get("quality", "0"), reverse=True)[0]
+        stream_url = best["url"]
 
         return {
             "status": "ok",
-            "title": info.get("title"),
-            "duration": info.get("duration"),
-            "size_mb": round(size / (1024*1024), 2),
+            "title": data.get("title"),
+            "duration": data.get("duration"),
+            "stream_url": stream_url[:80] + "...",  # truncate for display
+            "quality": best.get("quality"),
+            "mime": best.get("mimeType"),
         }
 
     except Exception as e:
+        import traceback
         return {
             "status": "error",
             "error": str(e),
