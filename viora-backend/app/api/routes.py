@@ -54,38 +54,37 @@ async def analyze_youtube(body: AnalyzeRequest):
 @router.get("/test-download")
 async def test_download():
     import httpx
-    import tempfile
-    import os
 
     video_id = "5MgBikgcWnY"
+    instances = [
+        "https://pipedapi.kavin.rocks",
+        "https://piped-api.garudalinux.org",
+        "https://api.piped.projectsegfau.lt",
+        "https://pipedapi.adminforge.de",
+    ]
 
     try:
-        # Step 1 -- get stream URL from Piped
-        async with httpx.AsyncClient(timeout=30) as client:
-            r = await client.get(f"https://api.piped.yt/streams/{video_id}")
-            data = r.json()
+        async with httpx.AsyncClient(timeout=15) as client:
+            for base in instances:
+                try:
+                    r = await client.get(f"{base}/streams/{video_id}")
+                    if r.status_code == 200 and r.text.startswith("{"):
+                        data = r.json()
+                        if "videoStreams" in data:
+                            best = data["videoStreams"][0]
+                            return {
+                                "status": "ok",
+                                "instance": base,
+                                "title": data.get("title"),
+                                "duration": data.get("duration"),
+                                "quality": best.get("quality"),
+                                "stream_url": best["url"][:80] + "...",
+                            }
+                        return {"status": "bad_response", "instance": base, "data": str(data)[:200]}
+                except Exception as e:
+                    continue
 
-        if "videoStreams" not in data:
-            return {"status": "error", "error": str(data)}
-
-        # Step 2 -- pick best video stream
-        streams = data["videoStreams"]
-        best = sorted(streams, key=lambda x: x.get("quality", "0"), reverse=True)[0]
-        stream_url = best["url"]
-
-        return {
-            "status": "ok",
-            "title": data.get("title"),
-            "duration": data.get("duration"),
-            "stream_url": stream_url[:80] + "...",  # truncate for display
-            "quality": best.get("quality"),
-            "mime": best.get("mimeType"),
-        }
+        return {"status": "error", "error": "all instances failed"}
 
     except Exception as e:
-        import traceback
-        return {
-            "status": "error",
-            "error": str(e),
-            "traceback": traceback.format_exc()
-        }
+        return {"status": "error", "error": str(e)}
