@@ -56,27 +56,35 @@ async def test_download():
     import yt_dlp
     import tempfile
     import os
+    import traceback
 
     url = "https://www.youtube.com/shorts/5MgBikgcWnY"
     out_dir = tempfile.mkdtemp()
 
-    ydl_opts = {
-        "format": "best[ext=mp4]/best",
-        "outtmpl": f"{out_dir}/%(id)s.%(ext)s",
-        "quiet": True,
-        "noplaylist": True,
-    }
+    try:
+        ydl_opts = {
+            "format": "best[ext=mp4]/best",
+            "outtmpl": f"{out_dir}/%(id)s.%(ext)s",
+            "quiet": True,
+            "noplaylist": True,
+        }
 
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=True)
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
 
-    files = os.listdir(out_dir)
-    size = os.path.getsize(f"{out_dir}/{files[0]}") if files else 0
+        files = os.listdir(out_dir)
+        size = os.path.getsize(f"{out_dir}/{files[0]}") if files else 0
 
-    return {
-        "status": "ok",
-        "title": info.get("title"),
-        "duration": info.get("duration"),
-        "size_mb": round(size / (1024*1024), 2),
-        "file": files[0] if files else None,
-    }
+        return {
+            "status": "ok",
+            "title": info.get("title"),
+            "duration": info.get("duration"),
+            "size_mb": round(size / (1024*1024), 2),
+        }
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
