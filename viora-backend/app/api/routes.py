@@ -71,7 +71,8 @@ async def test_download():
             "quiet": True,
             "noplaylist": True,
             "proxy": proxy,
-        }
+            "nocheckcertificate": True,
+}
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
