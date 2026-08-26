@@ -62,7 +62,7 @@ async def test_download():
     try:
         # Step 1 -- get stream URL from Piped
         async with httpx.AsyncClient(timeout=30) as client:
-            r = await client.get(f"https://pipedapi.kavin.rocks/streams/{video_id}")
+            r = await client.get(f"https://api.piped.yt/streams/{video_id}")
             data = r.json()
 
         if "videoStreams" not in data:
