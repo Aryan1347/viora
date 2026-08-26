@@ -53,38 +53,39 @@ async def analyze_youtube(body: AnalyzeRequest):
 
 @router.get("/test-download")
 async def test_download():
-    import httpx
+    import yt_dlp
+    import tempfile
+    import os
 
     video_id = "5MgBikgcWnY"
-    instances = [
-        "https://pipedapi.kavin.rocks",
-        "https://piped-api.garudalinux.org",
-        "https://api.piped.projectsegfau.lt",
-        "https://pipedapi.adminforge.de",
-    ]
+    url = f"https://www.youtube.com/shorts/{video_id}"
+    SCRAPER_API_KEY = "YOUR_KEY_HERE"
+    proxy = f"http://scraperapi:{SCRAPER_API_KEY}@proxy-server.scraperapi.com:8001"
+
+    out_dir = tempfile.mkdtemp()
 
     try:
-        async with httpx.AsyncClient(timeout=15) as client:
-            for base in instances:
-                try:
-                    r = await client.get(f"{base}/streams/{video_id}")
-                    if r.status_code == 200 and r.text.startswith("{"):
-                        data = r.json()
-                        if "videoStreams" in data:
-                            best = data["videoStreams"][0]
-                            return {
-                                "status": "ok",
-                                "instance": base,
-                                "title": data.get("title"),
-                                "duration": data.get("duration"),
-                                "quality": best.get("quality"),
-                                "stream_url": best["url"][:80] + "...",
-                            }
-                        return {"status": "bad_response", "instance": base, "data": str(data)[:200]}
-                except Exception as e:
-                    continue
+        ydl_opts = {
+            "format": "best[ext=mp4]/best",
+            "outtmpl": f"{out_dir}/%(id)s.%(ext)s",
+            "quiet": True,
+            "noplaylist": True,
+            "proxy": proxy,
+        }
 
-        return {"status": "error", "error": "all instances failed"}
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+
+        files = os.listdir(out_dir)
+        size = os.path.getsize(f"{out_dir}/{files[0]}") if files else 0
+
+        return {
+            "status": "ok",
+            "title": info.get("title"),
+            "duration": info.get("duration"),
+            "size_mb": round(size / (1024*1024), 2),
+        }
 
     except Exception as e:
-        return {"status": "error", "error": str(e)}
+        import traceback
+        return {"status": "error", "error": str(e), "traceback": traceback.format_exc()}
