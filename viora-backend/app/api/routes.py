@@ -57,11 +57,7 @@ async def test_download():
     import tempfile
     import os
 
-    video_id = "5MgBikgcWnY"
-    url = f"https://www.youtube.com/shorts/{video_id}"
-    SCRAPER_API_KEY = "YOUR_KEY_HERE"
-    proxy = f"http://scraperapi:{SCRAPER_API_KEY}@proxy-server.scraperapi.com:8001"
-
+    url = "https://www.youtube.com/shorts/5MgBikgcWnY"
     out_dir = tempfile.mkdtemp()
 
     try:
@@ -70,9 +66,7 @@ async def test_download():
             "outtmpl": f"{out_dir}/%(id)s.%(ext)s",
             "quiet": True,
             "noplaylist": True,
-            "proxy": proxy,
-            "nocheckcertificate": True,
-}
+        }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
@@ -88,5 +82,4 @@ async def test_download():
         }
 
     except Exception as e:
-        import traceback
-        return {"status": "error", "error": str(e), "traceback": traceback.format_exc()}
+        return {"status": "error", "error": str(e)}
